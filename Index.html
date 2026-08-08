@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>クイズ</title>
+<title>Chami Quiz</title>
 <style>
 :root{
   --ink:#141a2e; --ink-60:#5c6484; --line:#dfe3f0;
@@ -123,13 +123,13 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--brand-2);outline-of
   <!-- 1. スタート -->
   <section class="screen on" id="scr-start">
     <div class="card">
-      <h1 id="appTitle">クイズ</h1>
-      <p class="sub">学籍番号と名前を入れてはじめてください。</p>
+      <h1 id="appTitle">Chami Quiz</h1>
+      <p class="sub">学籍番号と名前を入れて、STARTボタンをタップしてください。</p>
       <label for="sid">学籍番号（半角）</label>
       <input type="text" id="sid" inputmode="numeric" autocomplete="off" placeholder="例）2500123">
       <label for="name">名前</label>
-      <input type="text" id="name" autocomplete="off" placeholder="例）海田 みか">
-      <button class="btn" id="btnStart">はじめる</button>
+      <input type="text" id="name" autocomplete="off" placeholder="例）神田花子">
+      <button class="btn" id="btnStart">START</button>
       <p class="note" id="startNote"></p>
     </div>
   </section>
@@ -190,7 +190,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--brand-2);outline-of
 var CONFIG = {
   // Google Sites や GitHub Pages に置くときだけ、GAS の /exec URL を貼る。
   // GAS でそのまま配信する場合は空のままでよい。
-  gasUrl: '',
+  gasUrl: 'https://script.google.com/macros/s/AKfycbwc4oPNFDo3JG6O5GN5_X_bIbQDl9Td3vl1UMPZmQexrPuOpQpD-dDxH21JxEXMTNrf/exec',
   pingIntervalMs: 20000   // 稼働モニタへの生存通知の間隔
 };
 
