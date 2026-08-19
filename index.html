@@ -123,13 +123,16 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--brand-2);outline-of
   <!-- 1. スタート -->
   <section class="screen on" id="scr-start">
     <div class="card">
-      <h1 id="appTitle">Chami Quiz</h1>
-      <p class="sub">学籍番号と名前を入れて、STARTボタンをタップしてください。</p>
+      <img id="logoImg" src="" alt="" style="display:none;max-width:100%;max-height:140px;margin:0 auto 16px;border-radius:12px">
+      <h1 id="appTitle">クイズ</h1>
+      <p class="sub">クラス・学籍番号・名前を入れてはじめてください。</p>
+      <label for="cls">クラス</label>
+      <input type="text" id="cls" autocomplete="off" placeholder="例）C">
       <label for="sid">学籍番号（半角）</label>
       <input type="text" id="sid" inputmode="numeric" autocomplete="off" placeholder="例）2500123">
       <label for="name">名前</label>
-      <input type="text" id="name" autocomplete="off" placeholder="例）神田花子">
-      <button class="btn" id="btnStart">START</button>
+      <input type="text" id="name" autocomplete="off" placeholder="例）神田 花子">
+      <button class="btn" id="btnStart">はじめる</button>
       <p class="note" id="startNote"></p>
     </div>
   </section>
@@ -190,8 +193,10 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--brand-2);outline-of
 var CONFIG = {
   // Google Sites や GitHub Pages に置くときだけ、GAS の /exec URL を貼る。
   // GAS でそのまま配信する場合は空のままでよい。
-  gasUrl: 'https://script.google.com/macros/s/AKfycbwc4oPNFDo3JG6O5GN5_X_bIbQDl9Td3vl1UMPZmQexrPuOpQpD-dDxH21JxEXMTNrf/exec',
-  pingIntervalMs: 20000   // 稼働モニタへの生存通知の間隔
+  gasUrl: '',
+  pingIntervalMs: 20000,   // 稼働モニタへの生存通知の間隔
+  // スタート画面に画像を出したいときだけ、画像の直リンクURLを貼る（空なら画像なし）
+  logoUrl: 'https://chamilingual.github.io/chami-quiz/chami_quiz_logo.PNG'
 };
 
 /* ==========================================================================
@@ -245,13 +250,26 @@ function demo(req){
  *  状態
  * ========================================================================== */
 var S = {
-  sid:'', name:'', title:'クイズ', countChoices:['5','10','全て'], sections:[],
+  sid:'', name:'', cls:'', title:'クイズ', countChoices:['5','10','全て'], sections:[],
   section:null, pass:80, questions:[], idx:0, correct:0, answered:0,
   wrongIds:[], mode:'normal', startedAt:0, elapsed:0, autoNextSec:0, passed:false,
   submissionId:'', sent:false, timer:null, deadline:0, qLimit:0, screen:'start'
 };
 
 var $ = function(id){ return document.getElementById(id); };
+
+/* 画像を指定しているときは、画像が正常に表示できた場合のみ画像を出し、
+   読み込みに失敗したときだけテキストのタイトルを出す。 */
+if (CONFIG.logoUrl){
+  var logo = $('logoImg');
+  $('appTitle').style.display = 'none';          // まず文字タイトルを隠す
+  logo.onload  = function(){ logo.style.display = 'block'; };
+  logo.onerror = function(){                      // 画像が出せなかったときだけ文字に戻す
+    logo.style.display = 'none';
+    $('appTitle').style.display = '';
+  };
+  logo.src = CONFIG.logoUrl;
+}
 
 function show(name){
   ['start','select','quiz','result'].forEach(function(n){
@@ -283,11 +301,12 @@ halfWidth($('sid'));
  *  1. スタート
  * ========================================================================== */
 $('btnStart').onclick = function(){
-  var sid = $('sid').value.trim(), name = $('name').value.trim();
+  var cls = $('cls').value.trim(), sid = $('sid').value.trim(), name = $('name').value.trim();
+  if (!cls){ modal('クラスを入力してください。'); return; }
   if (!sid){ modal('学籍番号を入力してください。'); return; }
   if (!name){ modal('名前を入力してください。'); return; }
-  S.sid = sid; S.name = name;
-  try{ sessionStorage.setItem('quiz_user', JSON.stringify({sid:sid, name:name})); }catch(e){}
+  S.cls = cls; S.sid = sid; S.name = name;
+  try{ sessionStorage.setItem('quiz_user', JSON.stringify({cls:cls, sid:sid, name:name})); }catch(e){}
   show('select');
   loadSections();
 };
@@ -295,12 +314,13 @@ $('btnStart').onclick = function(){
 (function restore(){
   try{
     var u = JSON.parse(sessionStorage.getItem('quiz_user') || 'null');
-    if (u){ $('sid').value = u.sid || ''; $('name').value = u.name || ''; }
+    if (u){ $('cls').value = u.cls || ''; $('sid').value = u.sid || ''; $('name').value = u.name || ''; }
   }catch(e){}
   api({action:'init'}).then(function(r){
     if (r.status !== 'ok') throw new Error(r.error || '読み込みに失敗しました');
     S.title = r.title; S.sections = r.sections; S.countChoices = r.countChoices || S.countChoices;
     $('appTitle').textContent = r.title;
+    $('logoImg').alt = r.title;
     document.title = r.title;
   }).catch(function(e){
     $('startNote').textContent = '問題の読み込みに失敗しました（' + e.message + '）。通信状況を確認して画面を再読み込みしてください。';
@@ -532,7 +552,7 @@ function send(){
   api({
     action:'submit',
     submissionId:S.submissionId,
-    sid:S.sid, name:S.name, section:S.section.name,
+    sid:S.sid, name:S.name, cls:S.cls, section:S.section.name,
     total:S.questions.length, correct:S.correct, seconds:S.elapsed, pass:S.pass,
     ua:navigator.userAgent
   }).then(function(r){
@@ -556,7 +576,7 @@ function send(){
 function ping(){
   if (!S.sid) return;
   var state = ({start:'開始前', select:'セクション選択中', quiz:(S.mode==='review'?'復習中':'回答中'), result:'結果画面'})[S.screen] || '';
-  api({action:'ping', sid:S.sid, name:S.name, section:(S.section ? S.section.name : ''),
+  api({action:'ping', sid:S.sid, name:S.name, cls:S.cls, section:(S.section ? S.section.name : ''),
        state:state, idx:S.idx + 1, total:S.questions.length}).catch(function(){});
 }
 setInterval(ping, CONFIG.pingIntervalMs);
